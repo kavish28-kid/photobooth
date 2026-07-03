@@ -17,7 +17,10 @@ const ParticleField = lazy(() => import("./three/ParticleField.jsx"));
 
 export default function App(){
   const reduceMotion = useReducedMotion();
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.has("room") ? 2 : 0;
+  });
   const goTo = useCallback((index) => {
     setActive(Math.max(0, Math.min(scenes.length - 1, index)));
   }, []);
