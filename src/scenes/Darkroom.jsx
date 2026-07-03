@@ -116,7 +116,7 @@ export default function Darkroom({ index, goTo }) {
             <div className="darkroom-section">
               <h3 className="darkroom-label">Export</h3>
               <div className="export-buttons">
-                <button className="btn btn-primary magnetic" onClick={handleDownload} disabled={store.selectedPhotos.length === 0}>Download PNG</button>
+                <button className="btn btn-primary magnetic" onClick={handleDownload} disabled={store.selectedPhotos.length === 0}>Keep this Forever 💾</button>
                 <button className="btn btn-outline magnetic" onClick={handlePrint} disabled={store.selectedPhotos.length === 0}>Print 🖨️</button>
               </div>
             </div>

@@ -1,19 +1,24 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export default function MemoryGalaxy({ count = 0, memories = [] }){
+export default function MemoryGalaxy({ count = 0, memories = [], onSelect }) {
   const canvas = useRef(null);
+  const [clicked, setClicked] = useState(false);
+
   useEffect(() => {
-    let disposed = false, frame = 0, renderer;
+    let disposed = false, frame = 0, renderer, raycaster, mouse, selectedObjects = [];
     const boot = async () => {
       const THREE = await import("three");
-      if(disposed || !canvas.current) return;
-      renderer = new THREE.WebGLRenderer({ canvas:canvas.current, alpha:true, antialias:true, powerPreference:"high-performance" });
+      if (disposed || !canvas.current) return;
+      renderer = new THREE.WebGLRenderer({ canvas: canvas.current, alpha: true, antialias: true, powerPreference: "high-performance" });
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
       camera.position.z = 12;
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
+
       const starGeo = new THREE.BufferGeometry();
       const starPos = new Float32Array(600 * 3);
-      for(let i = 0; i < 600; i++){
+      for (let i = 0; i < 600; i++) {
         const r = Math.cbrt(Math.random()) * 15;
         const theta = Math.random() * Math.PI * 2;
         const arm = (i % 3) * (Math.PI * 2 / 3);
@@ -24,39 +29,59 @@ export default function MemoryGalaxy({ count = 0, memories = [] }){
         starPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(a);
       }
       starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
-      const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color:0x8888ff, size:0.05, transparent:true, opacity:0.7 }));
+      const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x8888ff, size: 0.05, transparent: true, opacity: 0.7 }));
       scene.add(stars);
+
       const memTotal = Math.min(count, 200);
       const memGroup = new THREE.Group();
       const memPos = [];
-      if(memTotal > 0){
-        const memGeo = new THREE.BufferGeometry();
-        const memArr = new Float32Array(memTotal * 3);
-        for(let i = 0; i < memTotal; i++){
+      const memSprites = [];
+
+      if (memTotal > 0) {
+        for (let i = 0; i < memTotal; i++) {
           const angle = (i / memTotal) * Math.PI * 2 + Math.random() * 0.3;
           const mr = 0.5 + Math.random() * 2.5;
-          memArr[i * 3] = Math.cos(angle) * mr;
-          memArr[i * 3 + 1] = (Math.random() - 0.5) * 2;
-          memArr[i * 3 + 2] = Math.sin(angle) * mr;
-          memPos.push({ x: memArr[i * 3], y: memArr[i * 3 + 1], z: memArr[i * 3 + 2] });
-        }
-        memGeo.setAttribute("position", new THREE.BufferAttribute(memArr, 3));
-        memGroup.add(new THREE.Points(memGeo, new THREE.PointsMaterial({ color:0xffd700, size:0.15, transparent:true, opacity:0.9 })));
+          const x = Math.cos(angle) * mr;
+          const y = (Math.random() - 0.5) * 2;
+          const z = Math.sin(angle) * mr;
+          memPos.push({ x, y, z });
 
-        if(memTotal > 1){
+          const spriteMap = new THREE.CanvasTexture(generateStarTexture(THREE));
+          const spriteMat = new THREE.SpriteMaterial({ map: spriteMap, transparent: true, opacity: 0.9, color: 0xffd700 });
+          const sprite = new THREE.Sprite(spriteMat);
+          sprite.position.set(x, y, z);
+          sprite.scale.set(0.3, 0.3, 1);
+          sprite.userData = { index: i };
+          memGroup.add(sprite);
+          memSprites.push(sprite);
+        }
+
+        if (memTotal > 1) {
           const pairs = [];
-          for(let i = 0; i < memTotal; i++)
-            for(let j = i + 1; j < memTotal; j++)
-              if(Math.hypot(memPos[i].x - memPos[j].x, memPos[i].y - memPos[j].y, memPos[i].z - memPos[j].z) < 2.5)
+          for (let i = 0; i < memTotal; i++)
+            for (let j = i + 1; j < memTotal; j++)
+              if (Math.hypot(memPos[i].x - memPos[j].x, memPos[i].y - memPos[j].y, memPos[i].z - memPos[j].z) < 2.5)
                 pairs.push(memPos[i].x, memPos[i].y, memPos[i].z, memPos[j].x, memPos[j].y, memPos[j].z);
-          if(pairs.length){
+          if (pairs.length) {
             const l = new THREE.BufferGeometry();
             l.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pairs), 3));
-            memGroup.add(new THREE.LineSegments(l, new THREE.LineBasicMaterial({ color:0xffd700, transparent:true, opacity:0.12 })));
+            memGroup.add(new THREE.LineSegments(l, new THREE.LineBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.12 })));
           }
         }
       }
       scene.add(memGroup);
+
+      const handleClick = (e) => {
+        if (!canvas.current || memSprites.length === 0) return;
+        const rect = canvas.current.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObjects(memSprites);
+        if (hits.length > 0 && onSelect) {
+          onSelect(hits[0].object.userData.index);
+        }
+      };
 
       let mx = 0, my = 0;
       const move = (e) => { mx = e.clientX / innerWidth - 0.5; my = e.clientY / innerHeight - 0.5; };
@@ -78,13 +103,14 @@ export default function MemoryGalaxy({ count = 0, memories = [] }){
       };
       addEventListener("mousemove", move);
       addEventListener("resize", resize);
+      canvas.current.addEventListener("click", handleClick);
       resize();
       animate();
       canvas.current.cleanup = () => {
         removeEventListener("mousemove", move);
         removeEventListener("resize", resize);
+        canvas.current?.removeEventListener("click", handleClick);
         starGeo.dispose(); stars.material.dispose();
-        renderer.dispose();
       };
     };
     boot();
@@ -92,8 +118,24 @@ export default function MemoryGalaxy({ count = 0, memories = [] }){
       disposed = true;
       cancelAnimationFrame(frame);
       canvas.current?.cleanup?.();
+      renderer?.dispose?.();
     };
-  }, [count, memories]);
+  }, [count, memories, onSelect]);
 
-  return <canvas className="galaxy-canvas" ref={canvas} aria-hidden="true" />;
+  function generateStarTexture(THREE) {
+    const size = 32;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    grad.addColorStop(0, "rgba(255,215,0,1)");
+    grad.addColorStop(0.3, "rgba(255,215,0,0.6)");
+    grad.addColorStop(1, "rgba(255,215,0,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+    return canvas;
+  }
+
+  return <canvas className="galaxy-canvas" ref={canvas} aria-hidden="true" style={{ cursor: count > 0 ? "pointer" : "default" }} />;
 }

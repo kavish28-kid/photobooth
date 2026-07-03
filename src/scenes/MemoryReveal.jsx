@@ -3,6 +3,16 @@ import Scene from "../components/scene/Scene.jsx";
 import Headline from "../components/ui/Headline.jsx";
 import { getState } from "../stores/photoStore.js";
 import { addMemory } from "../stores/appStore.js";
+import { getTheme } from "../stores/themeStore.js";
+
+const chapterLines = [
+  "We laughed before the countdown.",
+  "Someone blinked. We kept it anyway.",
+  "Perfect lighting. Better company.",
+  "Three frames. One moment.",
+  "This one's going on the wall.",
+  "Caught in the act of being happy.",
+];
 
 export default function MemoryReveal({ index, goTo }) {
   const [photo, setPhoto] = useState(null);
@@ -13,6 +23,10 @@ export default function MemoryReveal({ index, goTo }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const wrapRef = useRef(null);
+  const theme = getTheme();
+  const isCouple = theme.story?.id === "couple";
+  const chapterLine = chapterLines[Math.floor(Math.random() * chapterLines.length)];
+  const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
   useEffect(() => {
     const state = getState();
@@ -74,13 +88,15 @@ export default function MemoryReveal({ index, goTo }) {
         </div>
         {showTitle && (
           <Headline>
-            <span className="reveal-title">Memory Unlocked ✦</span>
+            <span className="reveal-title">{isCouple ? "Chapter One ✦" : "Memory Unlocked ✦"}</span>
+            {isCouple && <span className="chapter-date">{today}</span>}
+            {isCouple && <span className="chapter-line">"{chapterLine}"</span>}
           </Headline>
         )}
         {showActions && (
           <div className="reveal-actions">
-            <button className="btn btn-primary magnetic" onClick={() => goTo(7)}>Continue</button>
-            <button className="btn btn-outline magnetic" onClick={handleSave}>Save</button>
+            <button className="btn btn-primary magnetic" onClick={() => goTo(7)}>View in Universe</button>
+            <button className="btn btn-outline magnetic" onClick={handleSave}>Keep this Forever</button>
           </div>
         )}
       </div>

@@ -33,10 +33,22 @@ export default function Booth({ index, active, goTo }) {
   const [flash, setFlash] = useState(false);
   const [capturedPhotos, setCapturedPhotos] = useState([]);
   const [peerPhotos, setPeerPhotos] = useState([]);
-  const [copyStatus, setCopyStatus] = useState("Copy link");
+  const [copyStatus, setCopyStatus] = useState("Share link");
   const [showQR, setShowQR] = useState(false);
   const [flareTalk, setFlareTalk] = useState("");
   const [reactions, setReactions] = useState([]);
+  const [achievement, setAchievement] = useState(null);
+
+  useEffect(() => {
+    if (boothState !== "printed") return;
+    const stored = parseInt(localStorage.getItem("flare-sessions") || "0") + 1;
+    localStorage.setItem("flare-sessions", stored);
+    let msg = null;
+    if (stored === 5) msg = { icon: "⭐", text: "5 sessions! You're a regular ✦" };
+    if (stored === 20) msg = { icon: "🏆", text: "Golden Film Unlocked ✦" };
+    if (stored === 50) msg = { icon: "💫", text: "FLARE Legend ✦" };
+    if (msg) { setAchievement(msg); setTimeout(() => setAchievement(null), 4000); }
+  }, [boothState]);
 
   useEffect(() => {
     if (active && !stream && boothState === "idle") {
@@ -113,7 +125,7 @@ export default function Booth({ index, active, goTo }) {
     } else {
       navigator.clipboard.writeText(shareUrl).then(() => {
         setCopyStatus("Copied!");
-        setTimeout(() => setCopyStatus("Copy link"), 2000);
+        setTimeout(() => setCopyStatus("Share link"), 2000);
       });
     }
   };
@@ -451,10 +463,10 @@ export default function Booth({ index, active, goTo }) {
                     if (goTo) goTo(5);
                   }}
                 >
-                  🖼️ Frame It →
+                  Keep this Forever ✦
                 </button>
                 <button className="btn btn-outline magnetic" onClick={handleDownloadStrip}>
-                  📥 Download Strip
+                  📥 Save Strip
                 </button>
                 <button className="btn btn-outline magnetic" onClick={startSession}>
                   Retake
@@ -467,13 +479,20 @@ export default function Booth({ index, active, goTo }) {
                 disabled={boothState !== "idle" || (roomId && !connected) || (roomId && !isHost)}
               >
                 {roomId && !isHost
-                  ? "Waiting for Host..."
+                  ? "Waiting for your friend..."
                   : boothState !== "idle"
-                  ? "Snapping..."
-                  : "✨ Start Photo Session"}
+                  ? "Capturing..."
+                  : "✨ Create a Memory"}
               </button>
             )}
           </div>
+
+          {achievement && (
+            <div className="achievement-toast">
+              <span className="achievement-icon">{achievement.icon}</span>
+              <span className="achievement-text">{achievement.text}</span>
+            </div>
+          )}
 
           {boothState === "printed" && capturedPhotos.length > 0 && (
             <div className="film-strip-preview-overlay">
