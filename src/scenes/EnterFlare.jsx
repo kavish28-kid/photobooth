@@ -1,7 +1,10 @@
 import { useState, useCallback, useEffect } from "react";
 import Scene from "../components/scene/Scene.jsx";
+import { useAudio } from "../hooks/useAudio.js";
+import gsap from "gsap";
 
 export default function EnterFlare({ index, api }) {
+  const audio = useAudio();
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [zooming, setZooming] = useState(false);
   const [awake, setAwake] = useState(false);
@@ -28,9 +31,11 @@ export default function EnterFlare({ index, api }) {
   }, []);
 
   const handleClick = useCallback(() => {
+    audio.lensClose();
     setZooming(true);
+    setTimeout(() => audio.flashSound(), 300);
     setTimeout(() => api.goTo(2), 600);
-  }, [api]);
+  }, [api, audio]);
 
   return (
     <Scene index={index}>

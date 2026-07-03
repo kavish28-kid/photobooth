@@ -29,7 +29,11 @@ export default function MemoryGalaxy({ count = 0, memories = [], onSelect }) {
         starPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(a);
       }
       starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
-      const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x8888ff, size: 0.05, transparent: true, opacity: 0.7 }));
+      const sizeArr = new Float32Array(600);
+      for (let i = 0; i < 600; i++) sizeArr[i] = 0.03 + Math.random() * 0.06;
+      starGeo.setAttribute("size", new THREE.BufferAttribute(sizeArr, 1));
+      const starMat = new THREE.PointsMaterial({ color: 0x8888ff, size: 0.05, transparent: true, opacity: 0.7, sizeAttenuation: true });
+      const stars = new THREE.Points(starGeo, starMat);
       scene.add(stars);
 
       const memTotal = Math.min(count, 200);
@@ -98,6 +102,18 @@ export default function MemoryGalaxy({ count = 0, memories = [], onSelect }) {
         camera.position.x += (mx * 0.8 - camera.position.x) * 0.03;
         camera.position.y += (-my * 0.8 - camera.position.y) * 0.03;
         camera.lookAt(0, 0, 0);
+        const t = Date.now() * 0.001;
+        const sizes = starGeo.attributes.size.array;
+        for (let i = 0; i < sizes.length; i++) {
+          sizes[i] = (0.03 + Math.random() * 0.01) + Math.sin(t * (1 + (i % 7)) + i) * 0.015;
+        }
+        starGeo.attributes.size.needsUpdate = true;
+        memSprites.forEach((s, i) => {
+          const pulse = 0.85 + Math.sin(t * (1.5 + (i % 3) * 0.7) + i * 0.7) * 0.15;
+          const scl = 0.3 * pulse;
+          s.scale.set(scl, scl, 1);
+          s.material.opacity = 0.6 + pulse * 0.4;
+        });
         renderer.render(scene, camera);
         frame = requestAnimationFrame(animate);
       };

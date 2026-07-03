@@ -3,20 +3,32 @@ import Scene from "../components/scene/Scene.jsx";
 import Headline from "../components/ui/Headline.jsx";
 import { frameStyles, photoFilters } from "../data.js";
 import { getState, setFrameStyle, setFilterType, setSelectedPhotos } from "../stores/photoStore.js";
+import { getTheme } from "../stores/themeStore.js";
+import gsap from "gsap";
 
-export default function Darkroom({ index, goTo }) {
+export default function Darkroom({ index, active, goTo }) {
   const [store, setStore] = useState(getState());
   const [activeFrame, setActiveFrame] = useState("strip");
   const [activeFilter, setActiveFilter] = useState("normal");
-  const [developing, setDeveloping] = useState(true);
+  const [developing, setDeveloping] = useState(false);
   const canvasRef = useRef(null);
+  const panelRef = useRef(null);
+  const theme = getTheme();
+  const storyColor = theme.story?.color || "#FF2A75";
 
   useEffect(() => {
+    if (!active) return;
     const s = getState();
     setStore(s);
+    setDeveloping(true);
     const timer = setTimeout(() => setDeveloping(false), 3000);
-    return () => clearTimeout(timer);
-  }, []);
+    return () => { clearTimeout(timer); setDeveloping(false); };
+  }, [active]);
+
+  useEffect(() => {
+    if (developing || !panelRef.current) return;
+    gsap.fromTo(panelRef.current.querySelectorAll(".darkroom-section"), { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.5, stagger: 0.1, ease: "power3.out" });
+  }, [developing]);
 
   useEffect(() => {
     if (store.selectedPhotos.length > 0) renderPreview();
@@ -88,7 +100,7 @@ export default function Darkroom({ index, goTo }) {
               <div className="frame-empty-msg">No photos selected</div>
             )}
           </div>
-          <div className="darkroom-controls">
+          <div className="darkroom-controls" ref={panelRef} style={{"--story-accent": storyColor}}>
             <div className="darkroom-section">
               <h3 className="darkroom-label">Frame</h3>
               <div className="frame-chip-group">

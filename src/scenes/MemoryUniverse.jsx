@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import Scene from "../components/scene/Scene.jsx";
 import { getAppState } from "../stores/appStore.js";
+import { getTheme } from "../stores/themeStore.js";
 import MemoryGalaxy from "../three/MemoryGalaxy.jsx";
 
 export default function MemoryUniverse({ index, active, goTo }) {
   const [memories, setMemories] = useState([]);
   const [count, setCount] = useState(0);
   const [selected, setSelected] = useState(null);
+  const theme = getTheme();
+  const storyColor = theme.story?.color || "#FFD700";
 
   useEffect(() => {
     const state = getAppState();
@@ -20,7 +23,7 @@ export default function MemoryUniverse({ index, active, goTo }) {
 
   return (
     <Scene index={index}>
-      <div className="memory-universe">
+      <div className="memory-universe" style={{"--universe-accent": storyColor}}>
         <div className="galaxy-bg">
           <MemoryGalaxy count={count} memories={memories} onSelect={handleSelect} />
         </div>

@@ -4,6 +4,7 @@ import Headline from "../components/ui/Headline.jsx";
 import { getState } from "../stores/photoStore.js";
 import { addMemory } from "../stores/appStore.js";
 import { getTheme } from "../stores/themeStore.js";
+import gsap from "gsap";
 
 const chapterLines = [
   "We laughed before the countdown.",
@@ -14,7 +15,7 @@ const chapterLines = [
   "Caught in the act of being happy.",
 ];
 
-export default function MemoryReveal({ index, goTo }) {
+export default function MemoryReveal({ index, active, goTo }) {
   const [photo, setPhoto] = useState(null);
   const [showFrame, setShowFrame] = useState(false);
   const [showTitle, setShowTitle] = useState(false);
@@ -29,20 +30,20 @@ export default function MemoryReveal({ index, goTo }) {
   const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
   useEffect(() => {
+    if (!active) return;
+    setShowFrame(false); setShowTitle(false); setShowActions(false);
     const state = getState();
     const dataUrl = state.selectedPhotos?.[0];
     if (dataUrl) {
       setPhoto(dataUrl);
       addMemory(dataUrl);
     }
-  }, []);
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setShowFrame(true), 1000);
-    const t2 = setTimeout(() => setShowTitle(true), 2500);
-    const t3 = setTimeout(() => setShowActions(true), 3000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, []);
+    const tl = gsap.timeline();
+    tl.to({}, { duration: 1, onComplete: () => setShowFrame(true) });
+    tl.to({}, { duration: 1.5, onComplete: () => setShowTitle(true) });
+    tl.to({}, { duration: 0.5, onComplete: () => setShowActions(true) });
+    return () => tl.kill();
+  }, [active]);
 
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;

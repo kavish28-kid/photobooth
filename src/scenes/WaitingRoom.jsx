@@ -6,17 +6,20 @@ import { getTheme } from "../stores/themeStore.js";
 export default function WaitingRoom({ index, api }){
   const [state, setState] = useState("waiting");
   const [story] = useState(() => getTheme().story);
+  const isActive = api.active === index;
 
   useEffect(() => {
+    if (!isActive) return;
+    setState("waiting"); // reset on activate
     const t1 = setTimeout(() => setState("typing"), 2000);
     const t2 = setTimeout(() => setState("connected"), 3500);
     const t3 = setTimeout(() => setState("ready"), 5000);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, []);
+  }, [isActive]);
 
   useEffect(() => {
-    if (state === "ready") api.goTo(4);
-  }, [state, api]);
+    if (isActive && state === "ready") api.goTo(4);
+  }, [state, api, isActive]);
 
   const avatar = story?.icon || "👤";
   const gradient = story?.gradient || "linear-gradient(135deg,#FF2A75,#FF6F91)";
