@@ -3,6 +3,8 @@ import Scene from "../components/scene/Scene.jsx";
 import Headline from "../components/ui/Headline.jsx";
 import { useCamera } from "../hooks/useCamera.js";
 import { usePeer } from "../hooks/usePeer.js";
+import { setPhotos } from "../stores/photoStore.js";
+import { flareTalks, liveReactions } from "../data.js";
 
 export default function Booth({ index, active, goTo }) {
   const [roomId, setRoomId] = useState(() => {
@@ -33,6 +35,8 @@ export default function Booth({ index, active, goTo }) {
   const [peerPhotos, setPeerPhotos] = useState([]);
   const [copyStatus, setCopyStatus] = useState("Copy link");
   const [showQR, setShowQR] = useState(false);
+  const [flareTalk, setFlareTalk] = useState("");
+  const [reactions, setReactions] = useState([]);
 
   useEffect(() => {
     if (active && !stream && boothState === "idle") {
@@ -71,6 +75,9 @@ export default function Booth({ index, active, goTo }) {
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.type === "start-countdown") {
       runCountdownSequence();
+    } else if (lastMsg.type === "reaction") {
+      setReactions((prev) => [...prev, { emoji: lastMsg.payload, id: Date.now(), x: Math.random() * 80 + 10, remote: true }]);
+      setTimeout(() => setReactions((prev) => prev.slice(1)), 2000);
     }
   }, [messages]);
 
@@ -158,9 +165,11 @@ export default function Booth({ index, active, goTo }) {
     for (let shot = 1; shot <= 3; shot++) {
       for (let i = 3; i > 0; i--) {
         setCount(i);
+        setFlareTalk(flareTalks[Math.floor(Math.random() * flareTalks.length)]);
         await delay(800);
       }
       setCount("📷");
+      setFlareTalk("");
       await delay(200);
 
       setFlash(true);
@@ -181,6 +190,12 @@ export default function Booth({ index, active, goTo }) {
     setBoothState("developing");
     await delay(2000);
     setBoothState("printed");
+  };
+
+  const sendReaction = (emoji) => {
+    setReactions((prev) => [...prev, { emoji, id: Date.now(), x: Math.random() * 80 + 10 }]);
+    if (roomId) sendMessage("reaction", emoji);
+    setTimeout(() => setReactions((prev) => prev.slice(1)), 2000);
   };
 
   const toggleFacingMode = () => {
@@ -278,10 +293,16 @@ export default function Booth({ index, active, goTo }) {
 
   const showSplit = roomId && connected && remoteStreams.length > 0;
   const gridCols = showSplit ? Math.min(remoteStreams.length + 1, 4) : 1;
+  const focusing = boothState === "countdown" && count !== null;
+  const lensClosed = boothState === "countdown" && count === "📷";
 
   return (
     <Scene index={index}>
       <div className={`flash-overlay ${flash ? "flash-now" : ""}`} />
+      <div className="lens-vignette" />
+      <div className="film-grain" />
+      <div className={`focus-ring ${focusing ? "focus-active" : ""}`} />
+      <div className={`lens-shutter ${lensClosed ? "shutter-closed" : ""}`} />
 
       <div className="booth-machine">
         <div className="booth-copy">
@@ -389,7 +410,16 @@ export default function Booth({ index, active, goTo }) {
               ))}
             </div>
 
+            {flareTalk && <div className="flare-talk">{flareTalk}</div>}
             {count !== null && <div className="countdown-overlay">{count}</div>}
+
+            {reactions.length > 0 && (
+              <div className="reactions-container">
+                {reactions.map((r) => (
+                  <span key={r.id} className="reaction-float" style={{ left: `${r.x}%` }}>{r.emoji}</span>
+                ))}
+              </div>
+            )}
 
             <div className="booth-status-bar">
               <span>{boothState.toUpperCase()}{isMock ? " (MOCK)" : ""}</span>
@@ -404,10 +434,27 @@ export default function Booth({ index, active, goTo }) {
               </button>
             )}
 
+            {boothState === "idle" && (
+              <div className="reaction-buttons">
+                {liveReactions.map((emoji) => (
+                  <button key={emoji} className="reaction-btn" onClick={() => sendReaction(emoji)}>{emoji}</button>
+                ))}
+              </div>
+            )}
+
             {boothState === "printed" ? (
               <div className="finished-actions-group">
-                <button className="btn btn-primary magnetic" onClick={handleDownloadStrip}>
-                  📥 Download Film Strip
+                <button
+                  className="btn btn-primary magnetic"
+                  onClick={() => {
+                    setPhotos(capturedPhotos, peerPhotos, roomId);
+                    if (goTo) goTo(5);
+                  }}
+                >
+                  🖼️ Frame It →
+                </button>
+                <button className="btn btn-outline magnetic" onClick={handleDownloadStrip}>
+                  📥 Download Strip
                 </button>
                 <button className="btn btn-outline magnetic" onClick={startSession}>
                   Retake
