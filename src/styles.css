@@ -71,11 +71,10 @@ a{text-decoration:none}
 
 /* ---- Layout ---- */
 #app{position:fixed;inset:0;overflow:hidden}.particle-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;opacity:.5;pointer-events:none}
-.scene-container{position:absolute;inset:0;z-index:1;transition:transform 1s cubic-bezier(.76,0,.24,1);will-change:transform;transform:translateZ(0)}
-.scene-shell{position:absolute;inset:0;top:calc(var(--n,0) * 100vh);opacity:.18;filter:blur(12px);transform:scale(.94) translateZ(0);transition:opacity 1s cubic-bezier(.76,0,.24,1),filter 1s cubic-bezier(.76,0,.24,1),transform 1s cubic-bezier(.76,0,.24,1);will-change:opacity,filter,transform}
-.scene-shell:nth-child(1){--n:0}.scene-shell:nth-child(2){--n:1}.scene-shell:nth-child(3){--n:2}.scene-shell:nth-child(4){--n:3}.scene-shell:nth-child(5){--n:4}.scene-shell:nth-child(6){--n:5}
-.scene-shell.active{opacity:1;filter:blur(0);transform:scale(1) translateZ(0)}
-.scene-shell.near{opacity:.52;filter:blur(7px);transform:scale(.965) translateZ(0)}
+.scene-container{position:absolute;inset:0;z-index:1}
+.scene-shell{position:absolute;inset:0;opacity:0;transform:scale(.95);transition:opacity .45s cubic-bezier(.17,.84,.44,1),transform .45s cubic-bezier(.17,.84,.44,1),filter .45s ease;pointer-events:none;filter:blur(6px)}
+.scene-shell.active{opacity:1;transform:scale(1);pointer-events:auto;filter:blur(0)}
+.scene-shell.near{opacity:.3;transform:scale(.97);filter:blur(3px)}
 
 .scene{min-height:100vh;width:100vw;overflow:hidden;display:grid;align-items:center;padding:92px clamp(22px,5vw,76px) 58px;position:relative}
 .scene::before{content:"";position:absolute;inset:-15%;z-index:-1;background:radial-gradient(circle at 20% 20%,rgba(255,42,117,.08),transparent 40%),radial-gradient(circle at 78% 70%,rgba(42,127,255,.06),transparent 36%),radial-gradient(circle at 50% 50%,rgba(155,81,224,.04),transparent 50%),linear-gradient(140deg,#FFF8F0,#FFF0F5 52%,#FFF8F0)}
@@ -513,6 +512,28 @@ h3{font-family:var(--display);font-size:clamp(22px,2.8vw,36px);font-weight:700}
   .blob,.sparkle{display:none!important}
   *{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
 }
+
+/* ---- Glitch Interference ---- */
+.glitch-overlay{position:fixed;inset:0;z-index:9997;pointer-events:none}
+.glitch-noise{position:absolute;inset:0;opacity:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:80px 80px;animation:glitchNoise .06s steps(3) infinite}
+@keyframes glitchNoise{0%{transform:translate(0,0)}33%{transform:translate(-4px,3px)}66%{transform:translate(5px,-3px)}100%{transform:translate(0,0)}}
+.glitch-scanlines{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);opacity:0}
+.glitch-bar{position:absolute;left:0;right:0;height:6px;background:rgba(255,255,255,.5);opacity:0}
+.glitch-bar-1{top:10%}.glitch-bar-2{top:60%}.glitch-bar-3{bottom:25%}
+
+.glitch-static .glitch-noise{opacity:.7;transition:opacity .1s}
+.glitch-static .glitch-scanlines{opacity:1;animation:scanlines .08s linear infinite}
+@keyframes scanlines{0%{transform:translateY(0)}100%{transform:translateY(4px)}}
+.glitch-static .glitch-bar{opacity:1;animation:glitchBar .15s steps(2) infinite}
+@keyframes glitchBar{0%{transform:translateX(-20px)}50%{transform:translateX(20px)}100%{transform:translateX(-20px)}}
+
+.glitch-scan .glitch-noise{opacity:.35;animation-duration:.12s}
+.glitch-scan .glitch-scanlines{opacity:1}
+.glitch-scan .glitch-bar{opacity:.6;height:3px;animation:glitchBar .2s steps(3) infinite}
+
+.glitch-flash .glitch-noise{opacity:.2}
+.glitch-flash .glitch-scanlines{opacity:.8}
+.glitch-overlay.glitch-flash{background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.35),transparent 70%)}
 
 @media (max-width: 700px) {
   .booth-screen-wrap { aspect-ratio: 4/3.4; }

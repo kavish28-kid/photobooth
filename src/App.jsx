@@ -1,8 +1,9 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useState, useRef } from "react";
 import CustomCursor from "./components/cursor/CustomCursor.jsx";
 import SideNav from "./components/nav/SideNav.jsx";
 import BottomDock from "./components/nav/BottomDock.jsx";
 import SceneContainer from "./components/scene/SceneContainer.jsx";
+import GlitchInterference from "./components/scene/GlitchInterference.jsx";
 import Hero from "./scenes/Hero.jsx";
 import Process from "./scenes/Process.jsx";
 import Booth from "./scenes/Booth.jsx";
@@ -21,9 +22,18 @@ export default function App(){
     const params = new URLSearchParams(window.location.search);
     return params.has("room") ? 2 : 0;
   });
+  const [glitchTrigger, setGlitchTrigger] = useState(0);
+  const prevActiveRef = useRef(active);
+
   const goTo = useCallback((index) => {
-    setActive(Math.max(0, Math.min(scenes.length - 1, index)));
+    const target = Math.max(0, Math.min(scenes.length - 1, index));
+    if (target !== prevActiveRef.current) {
+      prevActiveRef.current = target;
+      setGlitchTrigger((n) => n + 1);
+      setTimeout(() => setActive(target), 180);
+    }
   }, []);
+
   const nudge = useCallback((dir) => goTo(active + dir), [active, goTo]);
   const api = useMemo(() => ({ active, goTo, nudge }), [active, goTo, nudge]);
 
@@ -38,6 +48,7 @@ export default function App(){
       {!reduceMotion && <CustomCursor />}
       {!reduceMotion && <SideNav scenes={scenes} active={active} goTo={goTo} />}
       {!reduceMotion && <BottomDock scenes={scenes} active={active} goTo={goTo} />}
+      {!reduceMotion && <GlitchInterference trigger={glitchTrigger} />}
       <main id="app">
         <Suspense fallback={null}>
           {!reduceMotion && active <= 1 && <ParticleField />}
