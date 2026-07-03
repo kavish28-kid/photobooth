@@ -16,8 +16,8 @@ export default function Process({ index, active }){
     <Scene index={index}>
       <div className="step-room">
         <div>
-          <div className="eyebrow">The process</div>
-          <Headline>Four steps. <span className="aurora">Zero setup.</span></Headline>
+          <div className="eyebrow">The process ✦</div>
+          <Headline>four steps. <span className="grad-text">zero setup ✦</span></Headline>
           <p className="sub">One room at a time, the booth walks everyone from link to finished strip without asking them to learn a new app.</p>
         </div>
         <div className="step-room compact">

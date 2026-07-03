@@ -10,8 +10,8 @@ export default function Pricing({ index }){
     <Scene index={index}>
       <div className="pricing-layout">
         <div>
-          <div className="eyebrow">Pricing</div>
-          <Headline>One good camera, three ways to use it.</Headline>
+          <div className="eyebrow">Pricing ✦</div>
+          <Headline>one good camera, <span className="grad-text">three ways</span> to use it ✦</Headline>
           <div className="pricing-grid">
             {plans.map(([tag, name, amount, cadence, items, cta, featured]) => (
               <article className={`price-card ${featured ? "featured" : ""}`} key={name}>

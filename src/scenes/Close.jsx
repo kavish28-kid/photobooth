@@ -6,10 +6,10 @@ export default function Close({ index, goTo }){
   return (
     <Scene index={index}>
       <div className="close-scene">
-        <div className="eyebrow">Ready when you are</div>
-        <Headline>Open a booth. <span className="aurora">See who shows up.</span></Headline>
+        <div className="eyebrow">Ready when you are ✦</div>
+        <Headline>open a booth. <span className="grad-text">see who shows up ✦</span></Headline>
         <div className="actions center">
-          <MagneticButton className="primary" onClick={() => goTo(4)}>Start a session <Arrow /></MagneticButton>
+          <MagneticButton className="primary" onClick={() => goTo(4)}>✨ Start a session <Arrow /></MagneticButton>
         </div>
         <div className="footer-links">
           <button type="button" onClick={() => goTo(1)}>How it works</button>
@@ -17,7 +17,7 @@ export default function Close({ index, goTo }){
           <button type="button" onClick={() => goTo(4)}>Pricing</button>
           <button type="button" onClick={() => goTo(4)}>FAQ</button>
         </div>
-        <div className="copyright">FLARE PHOTOBOOTH - ROLL YOUR OWN LIGHT - 2026</div>
+        <div className="copyright">FLARE ✦ the online photobooth • 2026</div>
       </div>
     </Scene>
   );

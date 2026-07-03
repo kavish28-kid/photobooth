@@ -4,44 +4,51 @@ import { Peer } from "peerjs";
 export function usePeer(roomId, localStream) {
   const [peer, setPeer] = useState(null);
   const [conn, setConn] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
+  const [remoteStreams, setRemoteStreams] = useState([]);
   const [peerId, setPeerId] = useState(null);
   const [isHost, setIsHost] = useState(false);
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState([]);
   const [remotePhoto, setRemotePhoto] = useState(null);
+  const [peerCount, setPeerCount] = useState(0);
 
   const connRef = useRef(null);
   const localStreamRef = useRef(localStream);
   localStreamRef.current = localStream;
+  const connectionsRef = useRef([]);
+  const remoteStreamsRef = useRef([]);
 
-  // Cleanup helper
   const disconnect = useCallback(() => {
+    connectionsRef.current.forEach((c) => c.close());
+    connectionsRef.current = [];
+    remoteStreamsRef.current = [];
     if (connRef.current) connRef.current.close();
     if (peer) peer.destroy();
     setConnected(false);
-    setRemoteStream(null);
+    setRemoteStreams([]);
     setRemotePhoto(null);
+    setPeerCount(0);
   }, [peer]);
 
-  // Handle incoming call (used by Host)
   const handleCall = useCallback((call) => {
-    console.log("Receiving call from peer...");
     call.answer(localStreamRef.current);
     call.on("stream", (stream) => {
-      console.log("Received remote stream!");
-      setRemoteStream(stream);
+      remoteStreamsRef.current = [...remoteStreamsRef.current, stream];
+      setRemoteStreams([...remoteStreamsRef.current]);
+    });
+    call.on("close", () => {
+      remoteStreamsRef.current = remoteStreamsRef.current.filter((s) => s !== call.remoteStream);
+      setRemoteStreams([...remoteStreamsRef.current]);
     });
   }, []);
 
-  // Handle connection events (messages)
   const setupConnection = useCallback((connection) => {
+    connectionsRef.current = [...connectionsRef.current, connection];
     connRef.current = connection;
-    setConn(connection);
     setConnected(true);
+    setPeerCount(connectionsRef.current.length);
 
     connection.on("data", (data) => {
-      console.log("Received data:", data);
       if (data.type === "photo") {
         setRemotePhoto(data.payload);
       }
@@ -49,101 +56,96 @@ export function usePeer(roomId, localStream) {
     });
 
     connection.on("close", () => {
-      console.log("Peer connection closed");
-      setConnected(false);
-      setRemoteStream(null);
-      setRemotePhoto(null);
+      connectionsRef.current = connectionsRef.current.filter((c) => c !== connection);
+      setPeerCount(connectionsRef.current.length);
+      if (connectionsRef.current.length === 0) {
+        setConnected(false);
+        setRemoteStreams([]);
+        setRemotePhoto(null);
+      }
     });
   }, []);
 
   useEffect(() => {
     if (!roomId) return;
 
-    const hostId = `flare-${roomId}-host`;
-    const guestId = `flare-${roomId}-guest`;
-    const currentIsHost = !window.location.search.includes("room=");
+    const hostMarkerKey = `flare-host-${roomId}`;
+    const existingHost = sessionStorage.getItem(hostMarkerKey);
+    const currentIsHost = !existingHost;
+    if (currentIsHost) {
+      sessionStorage.setItem(hostMarkerKey, "true");
+    }
     setIsHost(currentIsHost);
 
-    const myId = currentIsHost ? hostId : guestId;
-    setPeerId(myId);
+    const hostId = `flare-${roomId}-host`;
+    const guestId = currentIsHost
+      ? hostId
+      : `flare-${roomId}-guest-${Math.random().toString(36).substring(2, 6)}`;
+    setPeerId(guestId);
 
-    // Initialize PeerJS
-    const newPeer = new Peer(myId, {
-      debug: 1,
-    });
-
+    const newPeer = new Peer(guestId, { debug: 1 });
     setPeer(newPeer);
 
     newPeer.on("open", (id) => {
-      console.log("My PeerJS ID is:", id);
-
       if (!currentIsHost) {
-        // Guest: connect to Host
-        console.log("Connecting to host:", hostId);
         const connection = newPeer.connect(hostId);
         setupConnection(connection);
 
-        // Guest: call Host
         if (localStreamRef.current) {
           const call = newPeer.call(hostId, localStreamRef.current);
           call.on("stream", (stream) => {
-            console.log("Guest received host stream!");
-            setRemoteStream(stream);
+            remoteStreamsRef.current = [...remoteStreamsRef.current, stream];
+            setRemoteStreams([...remoteStreamsRef.current]);
           });
         }
       }
     });
 
-    // Host: Listen for connections & calls
     if (currentIsHost) {
       newPeer.on("connection", (connection) => {
-        console.log("Guest connected to host!");
         setupConnection(connection);
       });
-
       newPeer.on("call", handleCall);
     }
 
     newPeer.on("error", (err) => {
       console.error("PeerJS error:", err);
-      // If Host ID is taken, we might already have a host active
-      if (err.type === "unavailable-id" && !currentIsHost) {
-        console.log("Host ID unavailable, retrying...");
-      }
     });
 
     return () => {
-      if (connRef.current) connRef.current.close();
+      connectionsRef.current.forEach((c) => c.close());
+      connectionsRef.current = [];
       newPeer.destroy();
+      sessionStorage.removeItem(hostMarkerKey);
     };
   }, [roomId, setupConnection, handleCall]);
 
-  // When localStream changes, update call for Guest if connected
   useEffect(() => {
     if (!isHost && connected && localStream && peer) {
       const hostId = `flare-${roomId}-host`;
       const call = peer.call(hostId, localStream);
       call.on("stream", (stream) => {
-        setRemoteStream(stream);
+        remoteStreamsRef.current = [...remoteStreamsRef.current, stream];
+        setRemoteStreams([...remoteStreamsRef.current]);
       });
     }
   }, [localStream, isHost, connected, peer, roomId]);
 
-  // Send message helper
   const sendMessage = useCallback((type, payload = null) => {
-    if (connRef.current && connRef.current.open) {
-      connRef.current.send({ type, payload });
-    }
+    connectionsRef.current.forEach((c) => {
+      if (c.open) c.send({ type, payload });
+    });
   }, []);
 
   return {
     isHost,
     connected,
-    remoteStream,
+    remoteStreams,
     sendMessage,
     messages,
     remotePhoto,
     setRemotePhoto,
     disconnect,
+    peerCount,
   };
 }

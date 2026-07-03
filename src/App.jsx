@@ -32,6 +32,7 @@ export default function App(){
   return (
     <>
       <div className="noise" />
+      <div className="blob" /><div className="blob" /><div className="blob" />
       <div className="brand magnetic" onClick={() => goTo(0)}>FLARE<span>.</span></div>
       <div className="scene-count" aria-live="polite">{String(active + 1).padStart(2, "0")} / 06</div>
       {!reduceMotion && <CustomCursor />}
@@ -44,7 +45,7 @@ export default function App(){
         <SceneContainer active={active} reduceMotion={reduceMotion}>
           <Hero index={0} api={api} />
           <Process index={1} active={active === 1} />
-          <Booth index={2} active={active === 2} />
+          <Booth index={2} active={active === 2} goTo={goTo} />
           <Gallery index={3} />
           <Pricing index={4} />
           <Close index={5} goTo={goTo} />

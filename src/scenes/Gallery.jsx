@@ -10,10 +10,10 @@ export default function Gallery({ index }){
       <Headline>Every roll of film <span className="pink">you wish</span> you still had.</Headline>
       <div className="gallery-wrap">
         <div className="gallery-grid">
-          {filters.map(([name, meta, bg, z]) => (
+          {filters.map(([name, meta, bg, z, emoji]) => (
             <TiltCard className="filter-tile" key={name} style={{ "--z":`${z}px` }}>
               <div className="swatch" style={{ background:bg }} />
-              <div className="filter-label"><strong>{name}</strong><span>{meta}</span></div>
+              <div className="filter-label"><strong>{emoji} {name}</strong><span>{meta}</span></div>
             </TiltCard>
           ))}
         </div>

@@ -8,13 +8,13 @@ export const processSteps = [
 ];
 
 export const filters = [
-  ["Kodalux", "WARM - GRAIN 3", "linear-gradient(140deg,#5a3a2a,#2c1a1c)", 18],
-  ["Noir Roll", "B&W - CONTRAST HIGH", "linear-gradient(140deg,#151515,#4b5563)", 2],
-  ["Aurora", "COOL - LEAK SOFT", "linear-gradient(140deg,#1f3b68,#5b2c7a)", 34],
-  ["Coral Fade", "WARM - FADE 40%", "linear-gradient(140deg,#5a2430,#fb7185)", 10],
-  ["Midnight", "COOL - GRAIN 5", "linear-gradient(140deg,#141428,#1c2c3a)", 28],
-  ["True Light", "NEUTRAL - CLEAN", "linear-gradient(140deg,#3f3f46,#a1a1aa)", 6],
-  ["Wrapped", "DUO - CYAN/CORAL", "linear-gradient(140deg,#22d3ee,#fb7185)", 22]
+  ["Cherry Pop", "PINK · GLOSSY", "linear-gradient(140deg,#FF2A75,#FF6F91)", 8, "🍒"],
+  ["Neon Lite", "LIME · EDGE", "linear-gradient(140deg,#B2FF1A,#FFE600)", 4, "💚"],
+  ["Vibe Check", "PURPLE · DREAM", "linear-gradient(140deg,#9B51E0,#C8A8FF)", 16, "✨"],
+  ["Sunset '00", "ORANGE · Y2K WARM", "linear-gradient(140deg,#FF6B2A,#FFE600)", 12, "🌅"],
+  ["Electric", "BLUE · HIGH VOLTAGE", "linear-gradient(140deg,#2A7FFF,#00D4AA)", 6, "⚡"],
+  ["Soft Focus", "LAVENDER · DUSTY", "linear-gradient(140deg,#C8A8FF,#FFE0EA)", 10, "🌸"],
+  ["Iridescent", "PINK · BLUE · SHIFT", "linear-gradient(140deg,#FF2A75,#9B51E0,#2A7FFF)", 20, "🦋"]
 ];
 
 export const quotes = [

@@ -4,36 +4,36 @@ import Headline from "../components/ui/Headline.jsx";
 import { useCamera } from "../hooks/useCamera.js";
 import { usePeer } from "../hooks/usePeer.js";
 
-export default function Booth({ index, active }) {
+export default function Booth({ index, active, goTo }) {
   const [roomId, setRoomId] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("room") || null;
   });
 
-  const { stream, error: cameraError, facingMode, startCamera, stopCamera } = useCamera();
+  const { stream, error: cameraError, errorType, facingMode, isMock, startCamera, stopCamera } = useCamera();
   const {
     isHost,
     connected,
-    remoteStream,
+    remoteStreams,
     sendMessage,
     messages,
     remotePhoto,
     setRemotePhoto,
     disconnect,
+    peerCount,
   } = usePeer(roomId, stream);
 
   const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
+  const remoteVideoRefs = useRef([]);
 
   const [count, setCount] = useState(null);
-  const [boothState, setBoothState] = useState("idle"); // idle, starting, countdown, flash, developing, printed
+  const [boothState, setBoothState] = useState("idle");
   const [flash, setFlash] = useState(false);
-  const [capturedPhotos, setCapturedPhotos] = useState([]); // Array of local snaps
-  const [peerPhotos, setPeerPhotos] = useState([]); // Array of remote snaps
+  const [capturedPhotos, setCapturedPhotos] = useState([]);
+  const [peerPhotos, setPeerPhotos] = useState([]);
   const [copyStatus, setCopyStatus] = useState("Copy link");
   const [showQR, setShowQR] = useState(false);
 
-  // Bind local stream
   useEffect(() => {
     if (active && !stream && boothState === "idle") {
       startCamera(facingMode);
@@ -46,14 +46,14 @@ export default function Booth({ index, active }) {
     }
   }, [stream]);
 
-  // Bind remote stream
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream]);
+    remoteStreams.forEach((s, i) => {
+      if (remoteVideoRefs.current[i]) {
+        remoteVideoRefs.current[i].srcObject = s;
+      }
+    });
+  }, [remoteStreams]);
 
-  // Stop camera on scene leave
   useEffect(() => {
     if (!active) {
       stopCamera();
@@ -66,17 +66,14 @@ export default function Booth({ index, active }) {
     }
   }, [active, stopCamera, disconnect]);
 
-  // Handle incoming PeerJS messages
   useEffect(() => {
     if (messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
-
     if (lastMsg.type === "start-countdown") {
       runCountdownSequence();
     }
   }, [messages]);
 
-  // Handle incoming remote photo updates
   useEffect(() => {
     if (remotePhoto) {
       setPeerPhotos((prev) => [...prev, remotePhoto]);
@@ -84,16 +81,14 @@ export default function Booth({ index, active }) {
     }
   }, [remotePhoto, setRemotePhoto]);
 
-  // Create room
   const handleCreateRoom = () => {
     const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     setRoomId(randomId);
-    // Push state to browser URL without refreshing
     const newUrl = `${window.location.origin}${window.location.pathname}?room=${randomId}`;
     window.history.pushState({ path: newUrl }, "", newUrl);
+    if (goTo) goTo(2);
   };
 
-  // Leave room
   const handleLeaveRoom = () => {
     disconnect();
     setRoomId(null);
@@ -104,37 +99,49 @@ export default function Booth({ index, active }) {
     startCamera(facingMode);
   };
 
-  // Copy share link
   const handleCopyLink = () => {
     const shareUrl = window.location.href;
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      setCopyStatus("Copied!");
-      setTimeout(() => setCopyStatus("Copy link"), 2000);
-    });
+    if (navigator.share) {
+      navigator.share({ title: "FLARE Photobooth", url: shareUrl }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        setCopyStatus("Copied!");
+        setTimeout(() => setCopyStatus("Copy link"), 2000);
+      });
+    }
   };
 
-  // Capture photo from local video stream
   const capturePhoto = (videoEl) => {
-    if (!videoEl) return null;
+    if (!videoEl && !isMock) return null;
     const canvas = document.createElement("canvas");
     canvas.width = 640;
     canvas.height = 480;
     const ctx = canvas.getContext("2d");
 
-    // Mirror horizontal view if front camera (user facing)
-    if (facingMode === "user") {
+    if (videoEl && !isMock && facingMode === "user") {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
 
-    ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+    if (videoEl) {
+      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+    } else {
+      const grad = ctx.createLinearGradient(0, 0, 640, 480);
+      grad.addColorStop(0, "#FF2A75");
+      grad.addColorStop(0.5, "#9B51E0");
+      grad.addColorStop(1, "#2A7FFF");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 640, 480);
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.font = "bold 36px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("📸", 320, 250);
+    }
     return canvas.toDataURL("image/png");
   };
 
-  // Start countdown sequence
   const startSession = () => {
-    if (roomId && !isHost) return; // Only host starts
-
+    if (roomId && !isHost) return;
     if (roomId && isHost) {
       sendMessage("start-countdown");
     }
@@ -146,12 +153,9 @@ export default function Booth({ index, active }) {
     setCapturedPhotos([]);
     setPeerPhotos([]);
     const snaps = [];
-
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    // We will take 3 photos in sequence
     for (let shot = 1; shot <= 3; shot++) {
-      // 3 seconds countdown per photo
       for (let i = 3; i > 0; i--) {
         setCount(i);
         await delay(800);
@@ -159,7 +163,6 @@ export default function Booth({ index, active }) {
       setCount("📷");
       await delay(200);
 
-      // Flash & Capture
       setFlash(true);
       const snap = capturePhoto(localVideoRef.current);
       if (snap) {
@@ -180,19 +183,15 @@ export default function Booth({ index, active }) {
     setBoothState("printed");
   };
 
-  // Toggle front/back camera
   const toggleFacingMode = () => {
     const nextMode = facingMode === "user" ? "environment" : "user";
     startCamera(nextMode);
   };
 
-  // Generate and download final retro film strip PNG
   const handleDownloadStrip = () => {
     const isMulti = roomId && connected && peerPhotos.length >= 3;
     const numPhotos = 3;
-
     const canvas = document.createElement("canvas");
-    // Width: Single column = 360, Dual column = 680
     const photoWidth = 280;
     const photoHeight = 210;
     const margin = 20;
@@ -203,17 +202,13 @@ export default function Booth({ index, active }) {
     const canvasHeight = numPhotos * (photoHeight + margin) + margin + 80;
 
     const ctx = canvas.getContext("2d");
-
-    // 1. Draw film strip background (deep dark zinc)
     ctx.fillStyle = "#0c0b0e";
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // 2. Draw retro film border lines
     ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
     ctx.lineWidth = 1;
     ctx.strokeRect(5, 5, canvasWidth - 10, canvasHeight - 10);
 
-    // Helper to draw sprocket holes
     const drawSprockets = (x) => {
       ctx.fillStyle = "#1e1b22";
       for (let y = 15; y < canvasHeight - 90; y += 40) {
@@ -223,18 +218,15 @@ export default function Booth({ index, active }) {
       }
     };
 
-    // Draw sprockets on sides
     drawSprockets(10);
     drawSprockets(canvasWidth - 22);
 
-    // Load and draw images
     let imagesLoaded = 0;
     const totalImages = isMulti ? 6 : 3;
 
     const onAllLoaded = () => {
-      // 3. Draw Branding & Meta text at bottom
       ctx.fillStyle = "#948da3";
-      ctx.font = "bold 10px 'Space Mono', monospace";
+      ctx.font = "bold 10px 'JetBrains Mono', monospace";
       ctx.fillText("FLARE PHOTOBOOTH", sprocketWidth + margin, canvasHeight - 45);
 
       const today = new Date().toLocaleDateString("en-US", {
@@ -248,7 +240,6 @@ export default function Booth({ index, active }) {
       ctx.fillText(`ROOM: ${roomId || "SOLO"}`, canvasWidth - 160, canvasHeight - 45);
       ctx.fillText("ROLL 03 / EXP 24", canvasWidth - 160, canvasHeight - 30);
 
-      // Trigger download
       const link = document.createElement("a");
       link.download = `flare-filmstrip-${roomId || "solo"}.png`;
       link.href = canvas.toDataURL("image/png");
@@ -258,18 +249,12 @@ export default function Booth({ index, active }) {
     const drawPhotoFrame = (img, col, row) => {
       const colX = sprocketWidth + col * colWidth + margin;
       const rowY = margin + row * (photoHeight + margin);
-
-      // Draw photo container border
       ctx.fillStyle = "#111827";
       ctx.fillRect(colX - 4, rowY - 4, photoWidth + 8, photoHeight + 8);
       ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
       ctx.strokeRect(colX - 4, rowY - 4, photoWidth + 8, photoHeight + 8);
-
-      // Draw image
       ctx.drawImage(img, colX, rowY, photoWidth, photoHeight);
-
-      // Apply subtle vignette effect/vintage tint
-      ctx.fillStyle = "rgba(139, 92, 246, 0.04)"; // slight violet tint
+      ctx.fillStyle = "rgba(139, 92, 246, 0.04)";
       ctx.fillRect(colX, rowY, photoWidth, photoHeight);
     };
 
@@ -278,25 +263,21 @@ export default function Booth({ index, active }) {
       img.onload = () => {
         drawPhotoFrame(img, col, row);
         imagesLoaded++;
-        if (imagesLoaded === totalImages) {
-          onAllLoaded();
-        }
+        if (imagesLoaded === totalImages) onAllLoaded();
       };
       img.src = src;
     };
 
-    // Load local snaps
     capturedPhotos.forEach((src, idx) => loadImg(src, 0, idx));
-
-    // Load peer snaps if multiplayer
-    if (isMulti) {
-      peerPhotos.forEach((src, idx) => loadImg(src, 1, idx));
-    }
+    if (isMulti) peerPhotos.forEach((src, idx) => loadImg(src, 1, idx));
   };
 
   const shareUrl = roomId
     ? `${window.location.origin}${window.location.pathname}?room=${roomId}`
     : "";
+
+  const showSplit = roomId && connected && remoteStreams.length > 0;
+  const gridCols = showSplit ? Math.min(remoteStreams.length + 1, 4) : 1;
 
   return (
     <Scene index={index}>
@@ -304,8 +285,8 @@ export default function Booth({ index, active }) {
 
       <div className="booth-machine">
         <div className="booth-copy">
-          <div className="eyebrow">Real photobooth</div>
-          <Headline>Say cheese, <span className="coral">in real time.</span></Headline>
+          <div className="eyebrow">Real photobooth ✦</div>
+          <Headline>say cheese, <span className="grad-text">in real time ✦</span></Headline>
           <p className="sub">
             Capture genuine smiles with live camera feed processing. Join a session to sync counts and snaps across screens.
           </p>
@@ -315,7 +296,7 @@ export default function Booth({ index, active }) {
               <div className="room-create-section">
                 <p className="room-status-desc">Want to snap with friends? Create a shared session.</p>
                 <button className="btn btn-outline magnetic" onClick={handleCreateRoom}>
-                  Create Multiplayer Room
+                  ✨ Create Multiplayer Room
                 </button>
               </div>
             ) : (
@@ -326,7 +307,7 @@ export default function Booth({ index, active }) {
                 </div>
                 <div className="room-status-indicator">
                   {connected ? (
-                    <span className="success-txt">✓ Connected with Peer</span>
+                    <span className="success-txt">✓ Connected — {peerCount} peer{peerCount !== 1 ? "s" : ""}</span>
                   ) : (
                     <span className="waiting-txt">⏳ Waiting for friends to join...</span>
                   )}
@@ -362,54 +343,62 @@ export default function Booth({ index, active }) {
         <div className="booth-view-container">
           <div className="booth-screen-wrap">
             <div className="hud">
-              <span><span className="rec" />LIVE</span>
+              <span><span className="rec" />LIVE{isMock ? " (MOCK)" : ""}</span>
               <span>{roomId ? `ROOM: ${roomId}` : "SOLO"}</span>
             </div>
 
-            <div className={`camera-grid ${roomId && connected ? "split" : "single"}`}>
-              {/* Local Feed */}
+            <div
+              className="camera-grid"
+              style={{
+                gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+              }}
+            >
               <div className="video-feed-wrapper">
-                {cameraError ? (
-                  <div className="camera-error-view">{cameraError}</div>
+                {isMock ? (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="video-feed"
+                  />
+                ) : stream ? (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className={`video-feed ${facingMode === "user" ? "mirrored" : ""}`}
+                  />
                 ) : (
-                  <>
-                    <video
-                      ref={localVideoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className={`video-feed ${facingMode === "user" ? "mirrored" : ""}`}
-                    />
-                    <span className="feed-tag">You</span>
-                  </>
+                  <div className="feed-placeholder">Starting camera...</div>
                 )}
+                <span className="feed-tag">You</span>
               </div>
 
-              {/* Remote Feed */}
-              {roomId && connected && (
-                <div className="video-feed-wrapper remote">
-                  {remoteStream ? (
-                    <>
-                      <video ref={remoteVideoRef} autoPlay playsInline className="video-feed" />
-                      <span className="feed-tag">Friend</span>
-                    </>
-                  ) : (
-                    <div className="feed-placeholder">Connecting stream...</div>
-                  )}
+              {showSplit && remoteStreams.map((_, idx) => (
+                <div key={idx} className="video-feed-wrapper remote">
+                  <video
+                    ref={(el) => { remoteVideoRefs.current[idx] = el; }}
+                    autoPlay
+                    playsInline
+                    className="video-feed"
+                  />
+                  <span className="feed-tag">Peer {idx + 1}</span>
                 </div>
-              )}
+              ))}
             </div>
 
             {count !== null && <div className="countdown-overlay">{count}</div>}
 
             <div className="booth-status-bar">
-              <span>{boothState.toUpperCase()}</span>
+              <span>{boothState.toUpperCase()}{isMock ? " (MOCK)" : ""}</span>
               <span>ROLL 03 / 24 EXP</span>
             </div>
           </div>
 
           <div className="booth-action-footer">
-            {stream && (
+            {stream && !isMock && (
               <button className="btn btn-outline circular-btn magnetic" onClick={toggleFacingMode} title="Toggle Camera">
                 🔄
               </button>
@@ -434,12 +423,11 @@ export default function Booth({ index, active }) {
                   ? "Waiting for Host..."
                   : boothState !== "idle"
                   ? "Snapping..."
-                  : "Start Photo Session"}
+                  : "✨ Start Photo Session"}
               </button>
             )}
           </div>
 
-          {/* Film Strip Preview */}
           {boothState === "printed" && capturedPhotos.length > 0 && (
             <div className="film-strip-preview-overlay">
               <p className="strip-title">FILM STRIP PREVIEW</p>
