@@ -11,8 +11,8 @@ export default function Hero({ index, api }){
           <Headline as="h1">{"say cheese • from wherever "}<span className="grad-text">you</span>{" are ✦"}</Headline>
           <p className="sub">FLARE turns any screen into a real photobooth — countdown, flash, filters, instant prints — so the whole group can pile in from across the room or across the world.</p>
           <div className="actions">
-            <MagneticButton className="primary" onClick={() => api.goTo(4)}>✨ Open a booth <Arrow /></MagneticButton>
-            <MagneticButton onClick={() => api.goTo(2)}>▶ See it in action <Play /></MagneticButton>
+            <MagneticButton className="primary" onClick={() => api.goTo(2)}>✨ Open a booth <Arrow /></MagneticButton>
+            <MagneticButton onClick={() => api.goTo(1)}>▶ See how it works <Play /></MagneticButton>
           </div>
         </div>
         <div className="hero-stage" aria-hidden="true">

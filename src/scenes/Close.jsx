@@ -9,13 +9,12 @@ export default function Close({ index, goTo }){
         <div className="eyebrow">Ready when you are ✦</div>
         <Headline>open a booth. <span className="grad-text">see who shows up ✦</span></Headline>
         <div className="actions center">
-          <MagneticButton className="primary" onClick={() => goTo(4)}>✨ Start a session <Arrow /></MagneticButton>
+          <MagneticButton className="primary" onClick={() => goTo(2)}>✨ Start a session <Arrow /></MagneticButton>
         </div>
         <div className="footer-links">
           <button type="button" onClick={() => goTo(1)}>How it works</button>
           <button type="button" onClick={() => goTo(3)}>Filters</button>
-          <button type="button" onClick={() => goTo(4)}>Pricing</button>
-          <button type="button" onClick={() => goTo(4)}>FAQ</button>
+          <button type="button" onClick={() => goTo(2)}>Booth</button>
         </div>
         <div className="copyright">FLARE ✦ the online photobooth • 2026</div>
       </div>

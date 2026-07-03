@@ -1,4 +1,4 @@
-export const scenes = ["Hero", "Process", "Booth", "Filters", "Pricing", "Close"];
+export const scenes = ["Hero", "Process", "Booth", "Filters", "Close"];
 
 export const processSteps = [
   ["01", "Open the link", "No app, no download. Anyone with the session link steps into the booth from their own camera."],
@@ -26,9 +26,7 @@ export const quotes = [
 ];
 
 export const plans = [
-  ["Casual", "Drop-in", "$0", "/session", ["Up to 8 guests", "3 core filters", "Digital film strip", "Session link, 24hr"], "Start free", false],
-  ["Most booked", "Occasion", "$29", "/event", ["Unlimited guests", "Full filter library", "Custom print border & branding", "Session link, 30 days", "Real print mail-out (US)"], "Book the booth", true],
-  ["Recurring", "Studio", "$79", "/month", ["Unlimited events", "Custom filters & presets", "Team seats & analytics", "Priority render queue"], "Talk to us", false]
+  ["Free", "Everyone", "$0", "", ["Unlimited guests", "All filters", "Digital film strip", "Download HD"], "Open the booth", true],
 ];
 
 export const faqs = [
