@@ -63,7 +63,7 @@ export default function Booth({ index, active, goTo }) {
   }, [remotePhoto, setRemotePhoto]);
 
   useEffect(() => {
-    if (!boothState !== "printed") return;
+    if (boothState !== "printed") return;
     const stored = parseInt(localStorage.getItem("flare-sessions") || "0") + 1;
     localStorage.setItem("flare-sessions", stored);
     let msg = null;
@@ -266,13 +266,16 @@ export default function Booth({ index, active, goTo }) {
             {stream && !isMock && boothState === "idle" && (
               <button className="btn btn-outline circular-btn" onClick={toggleFacingMode} title="Flip camera">🔄</button>
             )}
-            {boothState === "idle" && roomId && connected && (
-              <button className="btn btn-primary booth-start-btn" onClick={startSession}>✦ Create a Memory</button>
-            )}
-            {boothState === "idle" && (!roomId || (roomId && connected)) && (
-              <button className="btn btn-primary booth-start-btn" onClick={startSession} disabled={roomId && !connected}>
-                {roomId && !isHost ? "Waiting for your friend..." : "✦ Create a Memory"}
-              </button>
+            {boothState === "idle" && (
+              roomId && connected ? (
+                <button className="btn btn-primary booth-start-btn" onClick={startSession} disabled={!isHost}>
+                  {isHost ? "✦ Create a Memory" : "Waiting for your friend..."}
+                </button>
+              ) : !roomId ? (
+                <button className="btn btn-primary booth-start-btn" onClick={startSession}>
+                  Solo Snap
+                </button>
+              ) : null
             )}
             {boothState !== "idle" && boothState !== "printed" && (
               <div className="booth-recording-indicator">

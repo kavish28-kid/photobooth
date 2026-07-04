@@ -11,7 +11,7 @@ export function useWheelLock({ active, goTo, nudge, reduceMotion, count }){
     const commit = (dir) => {
       if(locked.current) return;
       locked.current = true;
-      nudge(dir);
+      try { nudge(dir); } catch (e) { console.warn("[FLARE] nudge error:", e); }
       unlock();
     };
     const onWheel = (event) => {

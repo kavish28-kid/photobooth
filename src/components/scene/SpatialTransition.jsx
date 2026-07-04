@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 const transitions = {
   0: { type: "lens", label: "lens-fade" },
@@ -10,12 +10,14 @@ const transitions = {
   6: { type: "fly", label: "photo-fly" },
 };
 
-export default function SpatialTransition({ trigger, fromScene }) {
+export default function SpatialTransition({ trigger, fromScene, onComplete }) {
+  const completedRef = useRef(false);
   const [visible, setVisible] = useState(false);
   const [phase, setPhase] = useState("idle");
 
   useEffect(() => {
     if (!trigger) return;
+    completedRef.current = false;
     const t = transitions[fromScene] || { type: "fade", label: "fade" };
     setVisible(true);
     setPhase(t.label);
@@ -27,10 +29,14 @@ export default function SpatialTransition({ trigger, fromScene }) {
     const t2 = setTimeout(() => {
       setPhase("idle");
       setVisible(false);
+      if (!completedRef.current) {
+        completedRef.current = true;
+        onComplete?.();
+      }
     }, d1 + d2);
 
     return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [trigger, fromScene]);
+  }, [trigger, fromScene, onComplete]);
 
   if (!visible) return null;
 
