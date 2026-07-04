@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
-export default function MemoryGalaxy({ count = 0, memories = [], onSelect }) {
+export default function MemoryGalaxy({ count = 0, memories = [], onSelect, active = true }) {
   const canvas = useRef(null);
-  const [clicked, setClicked] = useState(false);
 
   useEffect(() => {
-    let disposed = false, frame = 0, renderer, raycaster, mouse, selectedObjects = [];
+    if (!active || !canvas.current) return;
+    let disposed = false, frame = 0, renderer, raycaster, mouse;
     const boot = async () => {
       const THREE = await import("three");
       if (disposed || !canvas.current) return;
@@ -136,7 +136,7 @@ export default function MemoryGalaxy({ count = 0, memories = [], onSelect }) {
       canvas.current?.cleanup?.();
       renderer?.dispose?.();
     };
-  }, [count, memories, onSelect]);
+  }, [count, memories, onSelect, active]);
 
   function generateStarTexture(THREE) {
     const size = 32;

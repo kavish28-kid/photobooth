@@ -25,7 +25,7 @@ export default function MemoryUniverse({ index, active, goTo }) {
     <Scene index={index}>
       <div className="memory-universe" style={{"--universe-accent": storyColor}}>
         <div className="galaxy-bg">
-          <MemoryGalaxy count={count} memories={memories} onSelect={handleSelect} />
+          <MemoryGalaxy count={count} memories={memories} onSelect={handleSelect} active={active} />
         </div>
         <div className="universe-stats">✦ {count} Memories in the Universe</div>
         <div className="universe-actions">
