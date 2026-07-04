@@ -10,8 +10,13 @@ export default function EnterFlare({ index, api }) {
   const [awake, setAwake] = useState(false);
   const [blink, setBlink] = useState(false);
   const [smile, setSmile] = useState(false);
+  const isActive = api.active === index;
 
-  useEffect(() => { const t = setTimeout(() => setAwake(true), 800); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    if (!isActive) { setZooming(false); setAwake(false); return; }
+    const t = setTimeout(() => setAwake(true), 800);
+    return () => { clearTimeout(t); setZooming(false); setAwake(false); };
+  }, [isActive]);
 
   useEffect(() => {
     if (!awake) return;
