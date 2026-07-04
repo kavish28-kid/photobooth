@@ -12,13 +12,16 @@ export default function Booth({ index, active, goTo }) {
   const theme = getTheme();
   const storyGradient = theme.story?.gradient || "var(--grad-main)";
 
-  const [roomId, setRoomId] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("room") || null;
-  });
+  const urlRoom = new URLSearchParams(window.location.search).get("room");
+  const storedRoom = sessionStorage.getItem("flare-last-room-id");
+  const initialRoomId = urlRoom || storedRoom || null;
+  const initialIsHost = urlRoom ? (storedRoom === urlRoom) : !!storedRoom;
+
+  const [roomId, setRoomId] = useState(initialRoomId);
+  const [userIsHost, setUserIsHost] = useState(initialIsHost);
 
   const { stream, error: cameraError, errorType, facingMode, isMock, startCamera, stopCamera } = useCamera();
-  const { isHost, connected, remoteStreams, sendMessage, messages, remotePhoto, setRemotePhoto, disconnect, peerCount } = usePeer(roomId, stream);
+  const { isHost, connected, remoteStreams, sendMessage, messages, remotePhoto, setRemotePhoto, disconnect, peerCount } = usePeer(roomId, stream, userIsHost);
 
   const localVideoRef = useRef(null);
   const remoteVideoRefs = useRef([]);
@@ -77,26 +80,26 @@ export default function Booth({ index, active, goTo }) {
     audio.lensOpen();
     const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     setRoomId(randomId);
-    const newUrl = `${window.location.origin}${window.location.pathname}?room=${randomId}`;
-    window.history.pushState({ path: newUrl }, "", newUrl);
+    setUserIsHost(true);
+    sessionStorage.setItem("flare-last-room-id", randomId);
     if (goTo) goTo(4);
   }, [audio, goTo]);
 
   const handleLeaveRoom = useCallback(() => {
     disconnect();
+    sessionStorage.removeItem("flare-last-room-id");
     setRoomId(null);
+    setUserIsHost(false);
     setPeerPhotos([]);
     setCapturedPhotos([]);
-    const newUrl = `${window.location.origin}${window.location.pathname}`;
-    window.history.pushState({ path: newUrl }, "", newUrl);
     startCamera(facingMode);
   }, [disconnect, startCamera, facingMode]);
 
   const handleCopyLink = useCallback(() => {
-    const shareUrl = window.location.href;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
     if (navigator.share) navigator.share({ title: "FLARE Photobooth", url: shareUrl }).catch(() => {});
     else navigator.clipboard.writeText(shareUrl);
-  }, []);
+  }, [roomId]);
 
   const capturePhoto = (videoEl) => {
     if (!videoEl && !isMock) return null;

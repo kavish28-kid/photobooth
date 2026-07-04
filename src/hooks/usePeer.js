@@ -1,12 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Peer } from "peerjs";
 
-export function usePeer(roomId, localStream) {
+export function usePeer(roomId, localStream, isHost) {
   const [peer, setPeer] = useState(null);
   const [conn, setConn] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState([]);
   const [peerId, setPeerId] = useState(null);
-  const [isHost, setIsHost] = useState(false);
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState([]);
   const [remotePhoto, setRemotePhoto] = useState(null);
@@ -69,25 +68,17 @@ export function usePeer(roomId, localStream) {
   useEffect(() => {
     if (!roomId) return;
 
-    const hostMarkerKey = `flare-host-${roomId}`;
-    const existingHost = sessionStorage.getItem(hostMarkerKey);
-    const currentIsHost = !existingHost;
-    if (currentIsHost) {
-      sessionStorage.setItem(hostMarkerKey, "true");
-    }
-    setIsHost(currentIsHost);
-
     const hostId = `flare-${roomId}-host`;
-    const guestId = currentIsHost
+    const peerIdStr = isHost
       ? hostId
       : `flare-${roomId}-guest-${Math.random().toString(36).substring(2, 6)}`;
-    setPeerId(guestId);
+    setPeerId(peerIdStr);
 
-    const newPeer = new Peer(guestId, { debug: 1 });
+    const newPeer = new Peer(peerIdStr, { debug: 1 });
     setPeer(newPeer);
 
     newPeer.on("open", (id) => {
-      if (!currentIsHost) {
+      if (!isHost) {
         const connection = newPeer.connect(hostId);
         setupConnection(connection);
 
@@ -101,7 +92,7 @@ export function usePeer(roomId, localStream) {
       }
     });
 
-    if (currentIsHost) {
+    if (isHost) {
       newPeer.on("connection", (connection) => {
         setupConnection(connection);
       });
@@ -116,9 +107,8 @@ export function usePeer(roomId, localStream) {
       connectionsRef.current.forEach((c) => c.close());
       connectionsRef.current = [];
       newPeer.destroy();
-      sessionStorage.removeItem(hostMarkerKey);
     };
-  }, [roomId, setupConnection, handleCall]);
+  }, [roomId, isHost, setupConnection, handleCall]);
 
   useEffect(() => {
     if (!isHost && connected && localStream && peer) {
